@@ -1,16 +1,32 @@
-# This is a sample Python script.
+# Set up the environment, mission, rover, and navigation, then run the mission.
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-
-
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+from rover.rover import Rover
+from environment.environment import Environment
+from mission.mission import Mission
+from navigation.navigation import Navigation
+from mission.mission_runner import run_mission
 
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
+# Create the mission.
+mission = Mission((0, 0), (9, 9))
+start_x, start_y = mission.start_position
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+# Create the environment
+environment = Environment(10, 10)
+navigation = Navigation()
+
+mission_is_valid = mission.is_valid(environment)
+
+print(f"Mission valid: {mission_is_valid}")
+
+if mission_is_valid:
+    rover = Rover(start_x, start_y, "EAST", 1)
+
+    final_x, final_y, mission_completed = run_mission(
+        rover, mission, navigation, environment
+    )
+
+    print(f"Final position: ({final_x}, {final_y})")
+    print(f"Mission completed: {mission_completed}")
+else:
+    print("Mission cannot start.")
