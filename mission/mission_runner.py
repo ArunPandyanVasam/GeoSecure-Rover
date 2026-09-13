@@ -2,8 +2,12 @@ def run_mission(rover, mission, navigation, environment):
     while not mission.is_destination_reached((rover.x, rover.y)):
         direction = navigation.choose_direction(
             (rover.x, rover.y),
-            mission.destination
+            mission.destination,
+            environment
         )
+
+        if direction is None:
+            break
 
         rover.change_direction(direction)
 

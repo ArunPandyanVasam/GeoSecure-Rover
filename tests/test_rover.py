@@ -487,3 +487,108 @@ def test_rover_status_is_stopped_when_blocked_by_obstacle():
     rover = Rover(2, 4, "EAST", 1)
     rover.move(environment)
     assert rover.status == "STOPPED"
+
+
+def test_rover_detects_obstacle_in_next_position():
+    environment = Environment(4, 4)
+    environment.add_obstacle(2, 1)
+    rover = Rover(1, 1, "EAST", 1)
+    moved = rover.move(environment)
+    assert moved is False
+
+
+def test_rover_stays_in_position_when_obstacle_blocks_movement():
+    environment = Environment(4, 4)
+    environment.add_obstacle(2, 1)
+    rover = Rover(1, 1, "EAST", 1)
+    rover.move(environment)
+    assert rover.x == 1
+    assert rover.y == 1
+
+
+def test_rover_status_is_stopped_when_obstacle_blocks_movement():
+    environment = Environment(4, 4)
+    environment.add_obstacle(2, 1)
+    rover = Rover(1, 1, "EAST", 1)
+    rover.move(environment)
+    assert rover.status == "STOPPED"
+
+
+def test_rover_moves_when_next_position_is_free():
+    environment = Environment(4, 4)
+    rover = Rover(1, 1, "EAST", 1)
+    moved = rover.move(environment)
+    assert moved is True
+    assert rover.x == 2
+    assert rover.y == 1
+
+
+def test_rover_detects_obstacle_when_moving_west():
+    environment = Environment(4, 4)
+    environment.add_obstacle(1, 1)
+    rover = Rover(2, 1, "WEST", 1)
+    moved = rover.move(environment)
+    assert moved is False
+    assert rover.x == 2
+    assert rover.y == 1
+    assert rover.status == "STOPPED"
+
+
+def test_rover_detects_obstacle_when_moving_north():
+    environment = Environment(4, 4)
+    environment.add_obstacle(1, 2)
+    rover = Rover(1, 1, "NORTH", 1)
+    moved = rover.move(environment)
+    assert moved is False
+    assert rover.x == 1
+    assert rover.y == 1
+    assert rover.status == "STOPPED"
+
+
+def test_rover_detects_obstacle_when_moving_south():
+    environment = Environment(4, 4)
+    environment.add_obstacle(1, 0)
+    rover = Rover(1, 1, "SOUTH", 1)
+    moved = rover.move(environment)
+    assert moved is False
+    assert rover.x == 1
+    assert rover.y == 1
+    assert rover.status == "STOPPED"
+
+
+def test_rover_can_move_when_obstacle_is_not_in_next_position():
+    environment = Environment(4, 4)
+    environment.add_obstacle(2, 2)
+    rover = Rover(1, 1, "EAST", 1)
+    moved = rover.move(environment)
+    assert moved is True
+    assert rover.x == 2
+    assert rover.y == 1
+
+
+def test_rover_detects_blocked_position_with_multiple_obstacles():
+    environment = Environment(5, 5)
+    environment.add_obstacle(2, 1)
+    environment.add_obstacle(1, 2)
+    environment.add_obstacle(3, 1)
+    rover = Rover(1, 1, "EAST", 1)
+    moved = rover.move(environment)
+    assert moved is False
+    assert rover.x == 1
+    assert rover.y == 1
+    assert rover.status == "STOPPED"
+
+
+def test_rover_can_change_direction_after_obstacle():
+    environment = Environment(5, 5)
+    environment.add_obstacle(2, 1)
+    rover = Rover(1, 1, "EAST", 1)
+    moved = rover.move(environment)
+    assert moved is False
+    assert rover.x == 1
+    assert rover.y == 1
+    rover.change_direction("NORTH")
+    moved = rover.move(environment)
+    assert moved is True
+    assert rover.x == 1
+    assert rover.y == 2

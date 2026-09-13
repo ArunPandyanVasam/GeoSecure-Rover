@@ -32,7 +32,7 @@ class Rover:
         elif self.direction == "SOUTH":
             next_y = next_y - self.speed
 
-        if environment.is_within_bounds(next_x, next_y) and not environment.has_obstacle(next_x, next_y):
+        if environment.is_position_free(next_x, next_y):
             self.x = next_x
             self.y = next_y
             self.status = "MOVING"

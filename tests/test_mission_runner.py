@@ -33,3 +33,115 @@ def test_run_mission_when_already_at_destination():
     )
     assert (final_x, final_y) == (5, 5)
     assert mission_completed is True
+
+
+def test_run_mission_navigates_around_obstacle():
+    environment = Environment(5, 5)
+    mission = Mission((0, 2), (4, 2))
+    navigation = Navigation()
+    rover = Rover(0, 2, "EAST", 1)
+
+    environment.add_obstacle(2, 2)
+
+    final_x, final_y, mission_completed = run_mission(
+        rover,
+        mission,
+        navigation,
+        environment
+    )
+
+    assert (final_x, final_y) == (4, 2)
+    assert mission_completed is True
+
+
+def test_navigation_path_never_enters_obstacle():
+    environment = Environment(5, 5)
+    mission = Mission((0, 2), (4, 2))
+    navigation = Navigation()
+    rover = Rover(0, 2, "EAST", 1)
+
+    environment.add_obstacle(2, 2)
+
+    positions = [(rover.x, rover.y)]
+
+    while not mission.is_destination_reached((rover.x, rover.y)):
+        direction = navigation.choose_direction(
+            (rover.x, rover.y),
+            mission.destination,
+            environment
+        )
+
+        rover.change_direction(direction)
+        rover.move(environment)
+
+        positions.append((rover.x, rover.y))
+
+        if len(positions) > 25:
+            break
+
+    assert (4, 2) in positions
+    assert (2, 2) not in positions
+
+
+def test_run_mission_navigates_around_multiple_obstacles():
+    environment = Environment(5, 5)
+    mission = Mission((0, 2), (4, 2))
+    navigation = Navigation()
+    rover = Rover(0, 2, "EAST", 1)
+
+    environment.add_obstacle(2, 1)
+    environment.add_obstacle(2, 2)
+    environment.add_obstacle(2, 3)
+
+    final_x, final_y, mission_completed = run_mission(
+        rover,
+        mission,
+        navigation,
+        environment
+    )
+
+    assert (final_x, final_y) == (4, 2)
+    assert mission_completed is True
+
+
+def test_run_mission_stops_when_destination_is_unreachable():
+    environment = Environment(3, 3)
+    mission = Mission((1, 1), (2, 1))
+    navigation = Navigation()
+    rover = Rover(1, 1, "EAST", 1)
+
+    environment.add_obstacle(0, 1)
+    environment.add_obstacle(2, 1)
+    environment.add_obstacle(1, 0)
+    environment.add_obstacle(1, 2)
+
+    final_x, final_y, mission_completed = run_mission(
+        rover,
+        mission,
+        navigation,
+        environment
+    )
+
+    assert (final_x, final_y) == (1, 1)
+    assert mission_completed is False
+
+
+def test_unreachable_mission_keeps_rover_in_place():
+    environment = Environment(3, 3)
+    mission = Mission((1, 1), (2, 1))
+    navigation = Navigation()
+    rover = Rover(1, 1, "EAST", 1)
+
+    environment.add_obstacle(0, 1)
+    environment.add_obstacle(2, 1)
+    environment.add_obstacle(1, 0)
+    environment.add_obstacle(1, 2)
+
+    run_mission(
+        rover,
+        mission,
+        navigation,
+        environment
+    )
+
+    assert (rover.x, rover.y) == (1, 1)

@@ -1,6 +1,10 @@
 class Environment:
     # Define the size of the environment and create an empty obstacle set.
     def __init__(self, width, height):
+        if width <= 0:
+            raise ValueError("Environment width must be greater than 0")
+        if height <= 0:
+            raise ValueError("Environment height must be greater than 0")
         self.width = width
         self.height = height
         self.obstacles = set()
@@ -15,6 +19,25 @@ class Environment:
     def has_obstacle(self, x, y):
         return (x, y) in self.obstacles
 
+    # Check whether a position is inside the environment and has no obstacle.
+    def is_position_free(self, x, y):
+        return self.is_within_bounds(x, y) and not self.has_obstacle(x, y)
+
     # Check whether a position is inside the environment boundaries.
     def is_within_bounds(self, x, y):
         return 0 <= x < self.width and 0 <= y < self.height
+
+    # Create a grid representation of the environment.
+    def display_grid(self, rover=None):
+        grid = []
+        for y in range(self.height - 1, -1, -1):
+            row = []
+            for x in range(self.width):
+                if rover is not None and rover.x == x and rover.y == y:
+                    row.append("R")
+                elif self.has_obstacle(x, y):
+                    row.append("#")
+                else:
+                    row.append(".")
+            grid.append(row)
+        return grid
