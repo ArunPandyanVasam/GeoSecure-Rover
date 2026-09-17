@@ -145,3 +145,70 @@ def test_unreachable_mission_keeps_rover_in_place():
     )
 
     assert (rover.x, rover.y) == (1, 1)
+
+
+def test_run_mission_accepts_max_steps():
+    environment = Environment(5, 5)
+    mission = Mission((0, 0), (4, 4))
+    navigation = Navigation()
+    rover = Rover(0, 0, "EAST", 1)
+
+    final_x, final_y, mission_completed = run_mission(
+        rover,
+        mission,
+        navigation,
+        environment,
+        max_steps=100
+    )
+
+    assert (final_x, final_y) == (4, 4)
+    assert mission_completed is True
+
+
+def test_run_mission_stops_after_max_steps():
+    environment = Environment(5, 5)
+    mission = Mission((0, 0), (4, 4))
+    navigation = Navigation()
+    rover = Rover(0, 0, "EAST", 1)
+
+    final_x, final_y, mission_completed = run_mission(
+        rover,
+        mission,
+        navigation,
+        environment,
+        max_steps=3
+    )
+
+    assert (final_x, final_y) != (4, 4)
+    assert mission_completed is False
+
+
+def test_run_mission_detects_repeated_position():
+    class LoopingNavigation:
+        def __init__(self):
+            self.directions = ["EAST", "WEST"]
+            self.index = 0
+            self.calls = 0
+
+        def choose_direction(self, position, destination, environment):
+            self.calls += 1
+            direction = self.directions[self.index]
+            self.index = (self.index + 1) % len(self.directions)
+            return direction
+
+    environment = Environment(3, 3)
+    mission = Mission((0, 0), (2, 2))
+    navigation = LoopingNavigation()
+    rover = Rover(0, 0, "EAST", 1)
+
+    final_x, final_y, mission_completed = run_mission(
+        rover,
+        mission,
+        navigation,
+        environment,
+        max_steps=100
+    )
+
+    assert (final_x, final_y) == (0, 0)
+    assert mission_completed is False
+    assert navigation.calls < 100
