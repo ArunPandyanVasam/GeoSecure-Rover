@@ -1,6 +1,13 @@
+from mission.mission_result import MissionResult, MissionFailureReason
+
+
 def run_mission(rover, mission, navigation, environment, max_steps=100):
     if not mission.is_valid(environment):
-        return rover.x, rover.y, False
+        return MissionResult(
+            (rover.x, rover.y),
+            False,
+            MissionFailureReason.INVALID_MISSION
+        )
 
     steps = 0
     visited_positions = set()
@@ -12,7 +19,11 @@ def run_mission(rover, mission, navigation, environment, max_steps=100):
         current_position = (rover.x, rover.y)
 
         if current_position in visited_positions:
-            break
+            return MissionResult(
+                (rover.x, rover.y),
+                False,
+                MissionFailureReason.REPEATED_POSITION
+            )
 
         visited_positions.add(current_position)
 
@@ -23,7 +34,11 @@ def run_mission(rover, mission, navigation, environment, max_steps=100):
         )
 
         if direction is None:
-            break
+            return MissionResult(
+                (rover.x, rover.y),
+                False,
+                MissionFailureReason.DESTINATION_UNREACHABLE
+            )
 
         rover.change_direction(direction)
 
@@ -32,10 +47,31 @@ def run_mission(rover, mission, navigation, environment, max_steps=100):
         steps += 1
 
         if not moved:
-            break
+            return MissionResult(
+                (rover.x, rover.y),
+                False,
+                MissionFailureReason.MOVEMENT_BLOCKED
+            )
 
     mission_completed = mission.is_destination_reached(
         (rover.x, rover.y)
     )
 
-    return rover.x, rover.y, mission_completed
+    if mission_completed:
+        return MissionResult(
+            (rover.x, rover.y),
+            True
+        )
+
+    if steps >= max_steps:
+        return MissionResult(
+            (rover.x, rover.y),
+            False,
+            MissionFailureReason.MAX_STEPS_REACHED
+        )
+
+    return MissionResult(
+        (rover.x, rover.y),
+        False,
+        MissionFailureReason.DESTINATION_UNREACHABLE
+    )

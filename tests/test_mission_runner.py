@@ -3,6 +3,7 @@ from environment.environment import Environment
 from mission.mission import Mission
 from mission.mission_runner import run_mission
 from navigation.navigation import Navigation
+from mission.mission_result import MissionFailureReason
 
 
 def test_run_mission_reaches_destination():
@@ -10,14 +11,16 @@ def test_run_mission_reaches_destination():
     mission = Mission((0, 0), (5, 5))
     navigation = Navigation()
     rover = Rover(0, 0, "WEST", 1)
-    final_x, final_y, mission_completed = run_mission(
+    result = run_mission(
         rover,
         mission,
         navigation,
         environment
     )
-    assert (final_x, final_y) == (5, 5)
-    assert mission_completed is True
+
+    assert result.final_position == (5, 5)
+    assert result.mission_completed is True
+    assert result.failure_reason is None
 
 
 def test_run_mission_when_already_at_destination():
@@ -25,14 +28,16 @@ def test_run_mission_when_already_at_destination():
     mission = Mission((5, 5), (5, 5))
     navigation = Navigation()
     rover = Rover(5, 5, "EAST", 1)
-    final_x, final_y, mission_completed = run_mission(
+    result = run_mission(
         rover,
         mission,
         navigation,
         environment
     )
-    assert (final_x, final_y) == (5, 5)
-    assert mission_completed is True
+
+    assert result.final_position == (5, 5)
+    assert result.mission_completed is True
+    assert result.failure_reason is None
 
 
 def test_run_mission_navigates_around_obstacle():
@@ -43,15 +48,16 @@ def test_run_mission_navigates_around_obstacle():
 
     environment.add_obstacle(2, 2)
 
-    final_x, final_y, mission_completed = run_mission(
+    result = run_mission(
         rover,
         mission,
         navigation,
         environment
     )
 
-    assert (final_x, final_y) == (4, 2)
-    assert mission_completed is True
+    assert result.final_position == (4, 2)
+    assert result.mission_completed is True
+    assert result.failure_reason is None
 
 
 def test_navigation_path_never_enters_obstacle():
@@ -93,20 +99,21 @@ def test_run_mission_navigates_around_multiple_obstacles():
     environment.add_obstacle(2, 2)
     environment.add_obstacle(2, 3)
 
-    final_x, final_y, mission_completed = run_mission(
+    result = run_mission(
         rover,
         mission,
         navigation,
         environment
     )
 
-    assert (final_x, final_y) == (4, 2)
-    assert mission_completed is True
+    assert result.final_position == (4, 2)
+    assert result.mission_completed is True
+    assert result.failure_reason is None
 
 
 def test_run_mission_stops_when_destination_is_unreachable():
     environment = Environment(3, 3)
-    mission = Mission((1, 1), (2, 1))
+    mission = Mission((1, 1), (2, 2))
     navigation = Navigation()
     rover = Rover(1, 1, "EAST", 1)
 
@@ -115,15 +122,16 @@ def test_run_mission_stops_when_destination_is_unreachable():
     environment.add_obstacle(1, 0)
     environment.add_obstacle(1, 2)
 
-    final_x, final_y, mission_completed = run_mission(
+    result = run_mission(
         rover,
         mission,
         navigation,
         environment
     )
 
-    assert (final_x, final_y) == (1, 1)
-    assert mission_completed is False
+    assert result.final_position == (1, 1)
+    assert result.mission_completed is False
+    assert result.failure_reason == MissionFailureReason.DESTINATION_UNREACHABLE
 
 
 def test_unreachable_mission_keeps_rover_in_place():
@@ -153,16 +161,17 @@ def test_run_mission_accepts_max_steps():
     navigation = Navigation()
     rover = Rover(0, 0, "EAST", 1)
 
-    final_x, final_y, mission_completed = run_mission(
+    result = run_mission(
         rover,
         mission,
         navigation,
         environment,
-        max_steps=100
+        max_steps=10
     )
 
-    assert (final_x, final_y) == (4, 4)
-    assert mission_completed is True
+    assert result.final_position == (4, 4)
+    assert result.mission_completed is True
+    assert result.failure_reason is None
 
 
 def test_run_mission_stops_after_max_steps():
@@ -171,7 +180,7 @@ def test_run_mission_stops_after_max_steps():
     navigation = Navigation()
     rover = Rover(0, 0, "EAST", 1)
 
-    final_x, final_y, mission_completed = run_mission(
+    result = run_mission(
         rover,
         mission,
         navigation,
@@ -179,8 +188,9 @@ def test_run_mission_stops_after_max_steps():
         max_steps=3
     )
 
-    assert (final_x, final_y) != (4, 4)
-    assert mission_completed is False
+    assert result.final_position != (4, 4)
+    assert result.mission_completed is False
+    assert result.failure_reason == MissionFailureReason.MAX_STEPS_REACHED
 
 
 def test_run_mission_detects_repeated_position():
@@ -201,7 +211,7 @@ def test_run_mission_detects_repeated_position():
     navigation = LoopingNavigation()
     rover = Rover(0, 0, "EAST", 1)
 
-    final_x, final_y, mission_completed = run_mission(
+    result = run_mission(
         rover,
         mission,
         navigation,
@@ -209,8 +219,9 @@ def test_run_mission_detects_repeated_position():
         max_steps=100
     )
 
-    assert (final_x, final_y) == (0, 0)
-    assert mission_completed is False
+    assert result.final_position == (0, 0)
+    assert result.mission_completed is False
+    assert result.failure_reason == MissionFailureReason.REPEATED_POSITION
     assert navigation.calls < 100
 
 
@@ -222,15 +233,16 @@ def test_run_mission_rejects_invalid_mission():
 
     environment.add_obstacle(2, 2)
 
-    final_x, final_y, mission_completed = run_mission(
+    result = run_mission(
         rover,
         mission,
         navigation,
         environment
     )
 
-    assert (final_x, final_y) == (2, 2)
-    assert mission_completed is False
+    assert result.final_position == (2, 2)
+    assert result.mission_completed is False
+    assert result.failure_reason == MissionFailureReason.INVALID_MISSION
 
 
 def test_run_mission_rejects_invalid_destination():
@@ -241,12 +253,38 @@ def test_run_mission_rejects_invalid_destination():
 
     environment.add_obstacle(4, 4)
 
-    final_x, final_y, mission_completed = run_mission(
+    result = run_mission(
         rover,
         mission,
         navigation,
         environment
     )
 
-    assert (final_x, final_y) == (0, 0)
-    assert mission_completed is False
+    assert result.final_position == (0, 0)
+    assert result.mission_completed is False
+    assert result.failure_reason == MissionFailureReason.INVALID_MISSION
+
+
+def test_run_mission_stops_when_rover_movement_is_blocked():
+    environment = Environment(3, 1)
+    mission = Mission((0, 0), (2, 0))
+    rover = Rover(0, 0, "EAST", 1)
+
+    environment.add_obstacle(1, 0)
+
+    class BlockedNavigation:
+        def choose_direction(self, position, destination, environment):
+            return "EAST"
+
+    navigation = BlockedNavigation()
+
+    result = run_mission(
+        rover,
+        mission,
+        navigation,
+        environment
+    )
+
+    assert result.final_position == (0, 0)
+    assert result.mission_completed is False
+    assert result.failure_reason == MissionFailureReason.MOVEMENT_BLOCKED

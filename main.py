@@ -22,11 +22,15 @@ print(f"Mission valid: {mission_is_valid}")
 if mission_is_valid:
     rover = Rover(start_x, start_y, "EAST", 1)
 
-    final_x, final_y, mission_completed = run_mission(
-        rover, mission, navigation, environment
+    result = run_mission(
+        rover,
+        mission,
+        navigation,
+        environment
     )
 
-    print(f"Final position: ({final_x}, {final_y})")
-    print(f"Mission completed: {mission_completed}")
+    print(f"Final position: {result.final_position}")
+    print(f"Mission completed: {result.mission_completed}")
+    print(f"Failure reason: {result.failure_reason}")
 else:
     print("Mission cannot start.")
