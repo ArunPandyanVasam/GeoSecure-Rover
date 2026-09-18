@@ -1,4 +1,7 @@
 def run_mission(rover, mission, navigation, environment, max_steps=100):
+    if not mission.is_valid(environment):
+        return rover.x, rover.y, False
+
     steps = 0
     visited_positions = set()
 

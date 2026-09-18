@@ -212,3 +212,41 @@ def test_run_mission_detects_repeated_position():
     assert (final_x, final_y) == (0, 0)
     assert mission_completed is False
     assert navigation.calls < 100
+
+
+def test_run_mission_rejects_invalid_mission():
+    environment = Environment(5, 5)
+    mission = Mission((2, 2), (4, 4))
+    navigation = Navigation()
+    rover = Rover(2, 2, "EAST", 1)
+
+    environment.add_obstacle(2, 2)
+
+    final_x, final_y, mission_completed = run_mission(
+        rover,
+        mission,
+        navigation,
+        environment
+    )
+
+    assert (final_x, final_y) == (2, 2)
+    assert mission_completed is False
+
+
+def test_run_mission_rejects_invalid_destination():
+    environment = Environment(5, 5)
+    mission = Mission((0, 0), (4, 4))
+    navigation = Navigation()
+    rover = Rover(0, 0, "EAST", 1)
+
+    environment.add_obstacle(4, 4)
+
+    final_x, final_y, mission_completed = run_mission(
+        rover,
+        mission,
+        navigation,
+        environment
+    )
+
+    assert (final_x, final_y) == (0, 0)
+    assert mission_completed is False
