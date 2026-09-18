@@ -8,13 +8,13 @@ class Mission:
     def is_destination_reached(self, position):
         return position == self.destination
 
-    # Check whether both the start and destination are inside the environment.
+    # Check whether the start and destination are inside the environment and free.
     def is_valid(self, environment):
-        start_is_valid = environment.is_within_bounds(
+        start_is_valid = environment.is_position_free(
             self.start_position[0],
             self.start_position[1]
         )
-        destination_is_valid = environment.is_within_bounds(
+        destination_is_valid = environment.is_position_free(
             self.destination[0],
             self.destination[1]
         )
