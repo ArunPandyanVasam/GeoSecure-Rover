@@ -10,7 +10,14 @@ class MissionFailureReason(Enum):
 
 
 class MissionResult:
-    def __init__(self, final_position, mission_completed, failure_reason=None):
+    def __init__(
+        self,
+        final_position,
+        mission_completed,
+        failure_reason=None,
+        events=None
+    ):
         self.final_position = final_position
         self.mission_completed = mission_completed
         self.failure_reason = failure_reason
+        self.events = [] if events is None else events

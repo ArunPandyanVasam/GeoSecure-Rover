@@ -288,3 +288,226 @@ def test_run_mission_stops_when_rover_movement_is_blocked():
     assert result.final_position == (0, 0)
     assert result.mission_completed is False
     assert result.failure_reason == MissionFailureReason.MOVEMENT_BLOCKED
+
+
+def test_successful_mission_records_completion_event():
+    from mission.mission_status_event import MissionStatusEvent
+
+    environment = Environment(5, 5)
+    mission = Mission((0, 0), (2, 0))
+    rover = Rover(0, 0, "EAST", 1)
+    navigation = Navigation()
+
+    result = run_mission(
+        rover,
+        mission,
+        navigation,
+        environment
+    )
+
+    assert result.mission_completed is True
+    assert isinstance(result.events[-1], MissionStatusEvent)
+    assert result.events[-1].step == 2
+    assert result.events[-1].status == "COMPLETED"
+    assert result.events[-1].reason is None
+
+
+def test_blocked_movement_records_failure_event():
+    from mission.mission_status_event import MissionStatusEvent
+
+    class BlockedNavigation:
+        def choose_direction(self, current_position, destination, environment):
+            return "EAST"
+
+    environment = Environment(3, 1)
+    environment.add_obstacle(1, 0)
+
+    mission = Mission((0, 0), (2, 0))
+    rover = Rover(0, 0, "EAST", 1)
+    navigation = BlockedNavigation()
+
+    result = run_mission(
+        rover,
+        mission,
+        navigation,
+        environment
+    )
+
+    assert result.mission_completed is False
+    assert result.failure_reason == MissionFailureReason.MOVEMENT_BLOCKED
+    assert isinstance(result.events[-1], MissionStatusEvent)
+    assert result.events[-1].status == "FAILED"
+    assert result.events[-1].reason == MissionFailureReason.MOVEMENT_BLOCKED
+
+
+def test_mission_events_are_recorded_in_order():
+    from mission.mission_event import MissionEvent
+    from mission.mission_status_event import MissionStatusEvent
+
+    environment = Environment(5, 1)
+    mission = Mission((0, 0), (2, 0))
+    rover = Rover(0, 0, "EAST", 1)
+    navigation = Navigation()
+
+    result = run_mission(
+        rover,
+        mission,
+        navigation,
+        environment
+    )
+
+    assert result.mission_completed is True
+    assert len(result.events) == 3
+
+    assert isinstance(result.events[0], MissionEvent)
+    assert result.events[0].step == 1
+    assert result.events[0].position == (0, 0)
+    assert result.events[0].new_position == (1, 0)
+
+    assert isinstance(result.events[1], MissionEvent)
+    assert result.events[1].step == 2
+    assert result.events[1].position == (1, 0)
+    assert result.events[1].new_position == (2, 0)
+
+    assert isinstance(result.events[2], MissionStatusEvent)
+    assert result.events[2].step == 2
+    assert result.events[2].status == "COMPLETED"
+
+
+def test_failure_event_is_recorded_after_movement_event():
+    from mission.mission_event import MissionEvent
+    from mission.mission_status_event import MissionStatusEvent
+
+    class BlockedNavigation:
+        def choose_direction(self, current_position, destination, environment):
+            return "EAST"
+
+    environment = Environment(3, 1)
+    environment.add_obstacle(1, 0)
+
+    mission = Mission((0, 0), (2, 0))
+    rover = Rover(0, 0, "EAST", 1)
+    navigation = BlockedNavigation()
+
+    result = run_mission(
+        rover,
+        mission,
+        navigation,
+        environment
+    )
+
+    assert result.mission_completed is False
+    assert len(result.events) == 2
+
+    assert isinstance(result.events[0], MissionEvent)
+    assert result.events[0].step == 1
+    assert result.events[0].position == (0, 0)
+    assert result.events[0].new_position == (0, 0)
+    assert result.events[0].movement_successful is False
+
+    assert isinstance(result.events[1], MissionStatusEvent)
+    assert result.events[1].step == 1
+    assert result.events[1].status == "FAILED"
+    assert result.events[1].reason == MissionFailureReason.MOVEMENT_BLOCKED
+
+
+def test_unreachable_destination_records_failure_event():
+    from mission.mission_status_event import MissionStatusEvent
+
+    environment = Environment(3, 3)
+
+    environment.add_obstacle(1, 0)
+    environment.add_obstacle(0, 1)
+
+    mission = Mission((0, 0), (2, 2))
+    rover = Rover(0, 0, "EAST", 1)
+    navigation = Navigation()
+
+    result = run_mission(
+        rover,
+        mission,
+        navigation,
+        environment
+    )
+
+    assert result.mission_completed is False
+    assert result.failure_reason == MissionFailureReason.DESTINATION_UNREACHABLE
+    assert isinstance(result.events[-1], MissionStatusEvent)
+    assert result.events[-1].status == "FAILED"
+    assert result.events[-1].reason == MissionFailureReason.DESTINATION_UNREACHABLE
+
+
+def test_max_steps_failure_records_failure_event():
+    from mission.mission_status_event import MissionStatusEvent
+
+    environment = Environment(10, 1)
+    mission = Mission((0, 0), (9, 0))
+    rover = Rover(0, 0, "EAST", 1)
+    navigation = Navigation()
+
+    result = run_mission(
+        rover,
+        mission,
+        navigation,
+        environment,
+        max_steps=3
+    )
+
+    assert result.mission_completed is False
+    assert result.failure_reason == MissionFailureReason.MAX_STEPS_REACHED
+    assert isinstance(result.events[-1], MissionStatusEvent)
+    assert result.events[-1].status == "FAILED"
+    assert result.events[-1].reason == MissionFailureReason.MAX_STEPS_REACHED
+
+
+def test_repeated_position_failure_records_failure_event():
+    from mission.mission_status_event import MissionStatusEvent
+
+    class LoopingNavigation:
+        def choose_direction(self, current_position, destination, environment):
+            if current_position == (0, 0):
+                return "EAST"
+            return "WEST"
+
+    environment = Environment(3, 1)
+    mission = Mission((0, 0), (2, 0))
+    rover = Rover(0, 0, "EAST", 1)
+    navigation = LoopingNavigation()
+
+    result = run_mission(
+        rover,
+        mission,
+        navigation,
+        environment
+    )
+
+    assert result.mission_completed is False
+    assert result.failure_reason == MissionFailureReason.REPEATED_POSITION
+    assert isinstance(result.events[-1], MissionStatusEvent)
+    assert result.events[-1].status == "FAILED"
+    assert result.events[-1].reason == MissionFailureReason.REPEATED_POSITION
+
+
+def test_invalid_mission_records_failure_event():
+    from mission.mission_status_event import MissionStatusEvent
+
+    environment = Environment(3, 3)
+    environment.add_obstacle(0, 0)
+
+    mission = Mission((0, 0), (2, 2))
+    rover = Rover(0, 0, "EAST", 1)
+    navigation = Navigation()
+
+    result = run_mission(
+        rover,
+        mission,
+        navigation,
+        environment
+    )
+
+    assert result.mission_completed is False
+    assert result.failure_reason == MissionFailureReason.INVALID_MISSION
+    assert isinstance(result.events[-1], MissionStatusEvent)
+    assert result.events[-1].step == 0
+    assert result.events[-1].status == "FAILED"
+    assert result.events[-1].reason == MissionFailureReason.INVALID_MISSION
